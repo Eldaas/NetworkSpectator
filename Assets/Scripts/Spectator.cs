@@ -7,7 +7,6 @@ public class Spectator : NetworkBehaviour
 {
     NetworkIdentity identity;
     Transform target;
-    Camera cam;
 
     private void Awake()
     {
@@ -24,21 +23,23 @@ public class Spectator : NetworkBehaviour
     {
         identity = identityInstance;
         GetComponent<NetworkTransform>().transformSyncMode = NetworkTransform.TransformSyncMode.SyncTransform;
-        //Debug.Log(Stats.instance.name);
         StartCoroutine(SetSpectatorTarget());
     }
 
     private void Update()
-    {
-        if(target != null)
+    {   
+        if (target != null)
         {
+            Debug.Log("Target is NOT null");
             transform.position = target.position;
             if(Input.GetKeyDown(KeyCode.O))
             {
+                Debug.Log("Registered O key.");
                 RatePlayer(5);
             }
             else if(Input.GetKeyDown(KeyCode.P))
             {
+                Debug.Log("Registered P key.");
                 RatePlayer(-5);
             }
         }
@@ -46,13 +47,15 @@ public class Spectator : NetworkBehaviour
 
     void RatePlayer(int rating)
     {
+        Debug.Log("Rating the player with " + rating);
         Stats.instance.playerRating += rating;
         Rating.instance.UpdateRating(Stats.instance.playerRating);
         CmdRatePlayer(Stats.instance.playerRating);
     }
 
-    void ResetPlayerInstance()
+    public void ResetPlayerInstance()
     {
+        Debug.Log("Resetting player instance");
         CmdResetPlayerInstance();
     }
 
@@ -96,13 +99,13 @@ public class Spectator : NetworkBehaviour
     [Command]
     void CmdResetPlayerInstance()
     {
-
+        RpcSetPlayer(Stats.instance.player);
     }
 
     [ClientRpc]
     void RpcSetPlayer(GameObject playerInstance)
     {
-
+        Stats.instance.player = playerInstance;
     }
 
     IEnumerator SetSpectatorTarget()
@@ -113,6 +116,7 @@ public class Spectator : NetworkBehaviour
         }
 
         target = Stats.instance.player.transform;
+        Debug.Log("Target has been set.");
     }
 
 }
