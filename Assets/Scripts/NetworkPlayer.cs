@@ -6,17 +6,19 @@ using UnityEngine.Networking;
 public class NetworkPlayer : NetworkBehaviour
 {
     [SyncVar]
-    public float currentSpeed = 2;
+    public float currentSpeed = 1000;
 
     private Spectator spectator;
     private NetworkIdentity identity;
     private CharacterController controller;
+    private FreeCamera freeCamera;
 
     private void Awake()
     {
         identity = GetComponent<NetworkIdentity>();
         controller = GetComponent<CharacterController>();
         spectator = GetComponent<Spectator>();
+        freeCamera = GetComponent<FreeCamera>();
     }
 
     private void Start()
@@ -28,14 +30,17 @@ public class NetworkPlayer : NetworkBehaviour
     {
         if(Input.GetAxis("Vertical") > 0)
         {
-            controller.Move(Vector3.forward * currentSpeed * Time.deltaTime);
+            controller.Move(transform.forward * currentSpeed * Time.deltaTime);
         }
         else if(Input.GetAxis("Vertical") < 0)
         {
-            controller.Move(-Vector3.forward * currentSpeed * Time.deltaTime);
+            controller.Move(-transform.forward * currentSpeed * Time.deltaTime);
         }
     }
 
+    /// <summary>
+    /// Checks if the identity is the server and calls the relevant methods to set the player up as either the host or spectator.
+    /// </summary>
     private void NetworkSetup()
     {
         if (identity.isServer) 
@@ -58,7 +63,7 @@ public class NetworkPlayer : NetworkBehaviour
         else
         {
             spectator.ResetPlayerInstance();
-            if (identity.isLocalPlayer == true)
+            if (identity.isLocalPlayer)
             {
                 SetupSpectator(true);
             }
@@ -70,6 +75,10 @@ public class NetworkPlayer : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine probes server for player reference and waits for a response before setting up appropriate remote player type.
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator SetupRemotePlayer()
     {
         while (Stats.instance.player == null)
@@ -89,6 +98,10 @@ public class NetworkPlayer : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the object properties depending on if the gameobject is local or remote spectator.
+    /// </summary>
+    /// <param name="local"></param>
     private void SetupSpectator(bool local)
     {
         Transform child = transform.GetChild(0);
@@ -105,8 +118,7 @@ public class NetworkPlayer : NetworkBehaviour
             spectator.Initialize(identity);
             enabled = false;
             controller.enabled = false;
-            
-
+            freeCamera.enabled = false;
         }
         else
         {
@@ -116,17 +128,25 @@ public class NetworkPlayer : NetworkBehaviour
             GetComponent<NetworkTransform>().transformSyncMode = NetworkTransform.TransformSyncMode.SyncTransform;
             enabled = false;
             controller.enabled = false;
+            freeCamera.enabled = false;
             tag = "Spectator";
 
         }
     }
 
+    /// <summary>
+    /// Sends a command to the server to tell the clients to print a debug message to their respective consoles when a player joins the game.
+    /// </summary>
     [Command]
     public void CmdTellServer()
     {
         RpcTellClients($"{gameObject.name} has joined");
     }
 
+    /// <summary>
+    /// This is the implementation of the RPC call as a result of the CmdTellServer command.
+    /// </summary>
+    /// <param name="message"></param>
     [ClientRpc]
     public void RpcTellClients(string message)
     {

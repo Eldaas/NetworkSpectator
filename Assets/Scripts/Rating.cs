@@ -17,6 +17,10 @@ public class Rating : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates the player rating text on the local game client - has no effect upon game state or data on other clients.
+    /// </summary>
+    /// <param name="currentRating"></param>
     public void UpdateRating(int currentRating)
     {
         ratingText.text = "Rating : " + currentRating.ToString();
