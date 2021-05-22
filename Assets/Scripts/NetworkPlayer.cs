@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -43,27 +44,31 @@ public class NetworkPlayer : NetworkBehaviour
     /// </summary>
     private void NetworkSetup()
     {
-        if (identity.isServer) 
+        // Player objects are spawned on both the host client and on the spectator client. With two players connected, you have two objects on each client. 
+        // This method enables the client executing this code to figure out what to do with these game objects.
+        if (identity.isServer)
         {
-            if (identity.isLocalPlayer)
+            Debug.LogError("This is the server.");
+            if(identity.isLocalPlayer) // If this is the game object representing the actual player on this particular client.
             {
-                name = "Local - Host";
                 if (Stats.instance.player == null)
                 {
                     spectator.CmdSetPlayer(gameObject);
                 }
+
+                name = "Local - Host";
             }
-            else
+            else // If this is a game object being spawned on this particular client but which represents another player.
             {
                 spectator.ResetPlayerInstance();
                 StartCoroutine(SetupRemotePlayer());
             }
             name += " (Server Side)";
         }
-        else
+        else // If this is not the server
         {
             spectator.ResetPlayerInstance();
-            if (identity.isLocalPlayer)
+            if (identity.isLocalPlayer) // If this is the game object representing the actual player on this particular client.
             {
                 SetupSpectator(true);
             }
@@ -91,6 +96,9 @@ public class NetworkPlayer : NetworkBehaviour
             name = "Remote - Host";
             transform.GetChild(0).gameObject.SetActive(false);
             enabled = false;
+
+            GetComponent<FreeCamera>().enabled = false;
+            //GetComponent<CharacterController>().enabled = false;
         }
         else
         {
@@ -104,34 +112,33 @@ public class NetworkPlayer : NetworkBehaviour
     /// <param name="local"></param>
     private void SetupSpectator(bool local)
     {
-        Transform child = transform.GetChild(0);
+        Transform camera = transform.GetChild(0);
+        Transform redCube = transform.GetChild(1);
         MeshRenderer renderer = GetComponent<MeshRenderer>();
+
+        renderer.enabled = false;
+        redCube.gameObject.SetActive(false);
+        controller.enabled = false;
+        freeCamera.enabled = false;
+        tag = "Spectator";
 
         if (local)
         {
             name = "Local - Spectator";
-            child.transform.position = new Vector3(0, 3, -5);
-            child.transform.eulerAngles = new Vector3(45, 0, 0);
-            renderer.enabled = true;
+            camera.transform.position = new Vector3(0, 3, -5);
+            camera.transform.eulerAngles = new Vector3(45, 0, 0);
             spectator.enabled = true;
-            tag = "Spectator";
             spectator.Initialize(identity);
-            enabled = false;
-            controller.enabled = false;
-            freeCamera.enabled = false;
         }
         else
         {
             name = "Remote - Spectator";
-            renderer.enabled = false;
-            child.gameObject.SetActive(false);
+            camera.gameObject.SetActive(false);
+            spectator.enabled = false;
             GetComponent<NetworkTransform>().transformSyncMode = NetworkTransform.TransformSyncMode.SyncTransform;
-            enabled = false;
-            controller.enabled = false;
-            freeCamera.enabled = false;
-            tag = "Spectator";
-
         }
+
+        enabled = false;
     }
 
     /// <summary>
